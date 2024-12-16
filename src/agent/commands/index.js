@@ -14,8 +14,8 @@ export function getCommand(name) {
     return commandMap[name];
 }
 
-const commandRegex = /!(\w+)(?:\(((?:\d+|true|false|"[^"]*")(?:\s*,\s*(?:\d+|true|false|"[^"]*"))*)\))?/
-const argRegex = /\d+|true|false|"[^"]*"/g;
+const commandRegex = /!(\w+)(?:\(((?:-?\d+(?:\.\d+)?|true|false|"[^"]*")(?:\s*,\s*(?:-?\d+(?:\.\d+)?|true|false|"[^"]*"))*)\))?/
+const argRegex = /-?\d+(?:\.\d+)?|true|false|"[^"]*"/g;
 
 export function containsCommand(message) {
     const commandMatch = message.match(commandRegex);
@@ -108,12 +108,6 @@ export function parseCommandMessage(message) {
         let arg = args[i].trim();
         if ((arg.startsWith('"') && arg.endsWith('"')) || (arg.startsWith("'") && arg.endsWith("'"))) {
             arg = arg.substring(1, arg.length-1);
-        }
-
-        if (arg.includes('=')) {
-            // this sanitizes syntaxes like "x=2" and ignores the param name
-            let split = arg.split('=');
-            args[i] = split[1];
         }
         
         //Convert to the correct type
@@ -220,7 +214,7 @@ export async function executeCommand(agent, message) {
     }
 }
 
-export function getCommandDocs() {
+export function getCommandDocs(blacklist=null) {
     const typeTranslations = {
         //This was added to keep the prompt the same as before type checks were implemented.
         //If the language model is giving invalid inputs changing this might help.
@@ -234,6 +228,9 @@ export function getCommandDocs() {
     Use the commands with the syntax: !commandName or !commandName("arg1", 1.2, ...) if the command takes arguments.\n
     Do not use codeblocks. Use double quotes for strings. Only use one command in each response, trailing commands and comments will be ignored.\n`;
     for (let command of commandList) {
+        if (blacklist && blacklist.includes(command.name)) {
+            continue;
+        }
         docs += command.name + ': ' + command.description + '\n';
         if (command.params) {
             docs += 'Params:\n';
